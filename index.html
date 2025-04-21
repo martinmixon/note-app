@@ -99,7 +99,7 @@
                         <option value="">All Tags</option>
                         </select>
                 </div>
-                <div class="flex-shrink-0 w-full sm:w-auto">
+                 <div class="flex-shrink-0 w-full sm:w-auto">
                     <button id="clear-completed-button" title="Clear Completed Notes" class="w-full sm:w-auto p-2 h-[42px] border border-slate-300 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors duration-150 flex items-center justify-center">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         <span class="ml-1 sm:hidden">Clear Completed</span>
@@ -176,7 +176,8 @@
             console.log("[Script Start] Initializing...");
 
             // --- API Configuration ---
-            const API_BASE_URL = 'http://localhost:3001/api'; // Your backend URL
+            // !! IMPORTANT: Replace with your actual deployed backend URL !!
+            const API_BASE_URL = 'https://assorted-tin-busby.glitch.me/api'; // Your Glitch backend URL
 
             // --- DOM Elements ---
             const workNotesContainer = document.getElementById('work-notes-container');
@@ -222,7 +223,7 @@
             let isTogglingPlanner = false;
 
             // --- Utility Functions ---
-            const generateId = () => '_' + Math.random().toString(36).substr(2, 9); // Still useful for potential client-side ops if needed
+            const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
             const formatDateReadable = (dateInput) => { if (!dateInput) return ''; const date = new Date(dateInput); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }); };
             const formatDateReadableLong = (dateInput) => { if (!dateInput) return ''; const date = new Date(dateInput); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' }); };
             const extractHashtags = (text) => { if (!text) return []; const regex = /#([a-zA-Z0-9_]+)/g; const matches = text.match(regex); if (!matches) return []; return [...new Set(matches.map(tag => tag.substring(1)))]; };
@@ -232,7 +233,6 @@
             const showTemporaryMessage = (message, isError = false) => {
                 const messageDiv = document.createElement('div');
                 messageDiv.textContent = message;
-                // Add error styling if needed
                 const bgColor = isError ? 'bg-red-600' : 'bg-gray-800';
                 messageDiv.className = `fixed bottom-20 right-6 ${bgColor} text-white px-5 py-3 rounded-lg shadow-lg transition-opacity duration-300 z-50 text-sm opacity-0`;
                 document.body.appendChild(messageDiv);
@@ -241,45 +241,25 @@
                 setTimeout(() => {
                     messageDiv.style.opacity = '0';
                     setTimeout(() => { if (messageDiv.parentNode) { messageDiv.remove(); } }, 300);
-                }, 3000); // Keep message slightly longer
+                }, 3000);
             };
 
             // --- API Call Helper ---
-            /**
-             * Makes a fetch request to the backend API.
-             * @param {string} endpoint - The API endpoint (e.g., '/notes', '/notes/123').
-             * @param {object} options - Fetch options (method, headers, body).
-             * @returns {Promise<object|null>} - The JSON response or null on error.
-             */
             async function apiRequest(endpoint, options = {}) {
                 console.log(`[API Request] ${options.method || 'GET'} ${endpoint}`, options.body ? JSON.parse(options.body) : '');
                 try {
                     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-
                     if (!response.ok) {
-                        // Try to parse error message from backend if available
                         let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-                        try {
-                            const errorData = await response.json();
-                            errorMsg = errorData.error || errorMsg;
-                        } catch (e) { /* Ignore if response body isn't JSON */ }
-                        console.error(errorMsg);
-                        showTemporaryMessage(`Error: ${errorMsg}`, true);
-                        return null; // Indicate failure
+                        try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { /* Ignore */ }
+                        console.error(errorMsg); showTemporaryMessage(`Error: ${errorMsg}`, true); return null;
                     }
-
-                    // Handle responses that might not have a body (like DELETE 200 OK)
                     const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.indexOf("application/json") !== -1) {
-                        return await response.json(); // Parse JSON body
-                    } else {
-                        return { success: true, status: response.status }; // Return success indicator for non-JSON responses
-                    }
-
+                    if (contentType && contentType.indexOf("application/json") !== -1) { return await response.json(); }
+                    else { return { success: true, status: response.status }; }
                 } catch (error) {
                     console.error(`[API Fetch Error] ${options.method || 'GET'} ${endpoint}:`, error);
-                    showTemporaryMessage('Network error. Is the backend server running?', true);
-                    return null; // Indicate failure
+                    showTemporaryMessage('Network error. Is the backend server running?', true); return null;
                 }
             }
 
@@ -341,7 +321,7 @@
                  else if (containerElement.id === 'results-notes-container') { context = 'results'; }
 
                  let generatedHTML = "";
-                 notesToRender.forEach(note => { generatedHTML += createNoteCardHTML(note, context); });
+                 notesToRender.forEach(note => { generatedHTML += createNoteCardHTML(note, context); }); // Pass context here
 
                  containerElement.innerHTML = '';
                  const noNotesMsg = containerElement.querySelector('.no-notes-message');
@@ -349,10 +329,12 @@
                      if(noNotesMsg) noNotesMsg.classList.add('hidden');
                      containerElement.classList.add('space-y-2');
                      containerElement.innerHTML = generatedHTML;
+                     // console.log(`[Render Container] After render for ${containerElement.id}, childElementCount: ${containerElement.childElementCount}, First child:`, containerElement.firstElementChild?.outerHTML.substring(0,100)); // Less verbose
                  } else {
                      if(noNotesMsg) noNotesMsg.classList.remove('hidden');
                      else { containerElement.innerHTML = `<p class="no-notes-message text-slate-500 text-sm">No notes found.</p>`; }
                      containerElement.classList.remove('space-y-2');
+                     // console.log(`[Render Container] After render for ${containerElement.id} (empty), childElementCount: ${containerElement.childElementCount}`); // Less verbose
                  }
                  addNoteCardEventListeners(containerElement);
             };
@@ -419,7 +401,6 @@
                 const isPlannerNote = noteAddToPlannerFlag.value === 'true';
                 const categorySelected = noteCategoryInput.value !== 'none';
 
-                // Frontend validation (redundant if button is disabled, but good practice)
                 if (isAddingNew && !isPlannerNote && !categorySelected) {
                      console.warn("[Save] Attempted to save without category selection.");
                      showModal('Category Required', 'Please select a category (Work or Personal) before saving.', () => hideModal());
@@ -435,53 +416,30 @@
 
                 let result = null;
                 if (isAddingNew) {
-                    // Create New Note via API
                     const newNoteData = { content, category, tags, isInPlanner: isPlannerNote, isComplete: false };
-                    result = await apiRequest('/notes', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newNoteData)
-                    });
+                    result = await apiRequest('/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newNoteData) });
                 } else {
-                    // Update Existing Note via API (only content, category, tags)
                     const updatedNoteData = { content, category, tags };
-                     result = await apiRequest(`/notes/${noteToEditId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(updatedNoteData)
-                    });
+                     result = await apiRequest(`/notes/${noteToEditId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedNoteData) });
                 }
 
-                if (result) { // If API call was successful
+                if (result) {
                     hideEditor();
-                    await fetchNotesFromServer(); // Refetch all notes to update UI
-                    populateHashtagFilter(); // Update tags based on potentially new data
+                    await fetchNotesFromServer();
+                    populateHashtagFilter();
                     showTemporaryMessage(isAddingNew ? "Note created!" : "Note updated!");
-                } else {
-                    // Error message already shown by apiRequest helper
-                    console.error("Failed to save note via API.");
-                }
+                } else { console.error("Failed to save note via API."); }
             };
 
             const resetEditor = () => { noteIdInput.value = ''; noteContentInput.value = ''; noteCategoryInput.value = 'none'; noteAddToPlannerFlag.value = 'false'; editorTitle.textContent = 'Add New Note'; updateSaveButtonState(); };
-            const handleCancelNote = () => { hideEditor(); }; // For main editor overlay
+            const handleCancelNote = () => { hideEditor(); };
 
             const handleEditNoteClick = (noteId) => {
-                const note = notes.find(n => n.id === noteId); // Find in current frontend state
+                const note = notes.find(n => n.id === noteId);
                 if (note) {
-                    resetEditor();
-                    noteToEditId = note.id;
-                    noteContentInput.value = note.content || '';
-                    noteCategoryInput.value = note.category || 'none';
-                    // Set flags based on the note being edited
-                    noteAddToPlannerFlag.value = note.isInPlanner ? 'true' : 'false';
-                    editorTitle.textContent = 'Edit Note';
-                    updateSaveButtonState(); // Ensure save is enabled
-                    showEditor();
-                } else {
-                    console.error("Cannot edit note - not found in local state:", noteId);
-                    showTemporaryMessage("Error: Could not find note data to edit.", true);
-                }
+                    resetEditor(); noteToEditId = note.id; noteContentInput.value = note.content || ''; noteCategoryInput.value = note.category || 'none';
+                    noteAddToPlannerFlag.value = note.isInPlanner ? 'true' : 'false'; editorTitle.textContent = 'Edit Note'; updateSaveButtonState(); showEditor();
+                } else { console.error("Cannot edit note - not found in local state:", noteId); showTemporaryMessage("Error: Could not find note data to edit.", true); }
             };
 
             const handleDeleteNoteClick = (noteId) => {
@@ -489,185 +447,72 @@
                 const displayTitle = (note.content || '').split('\n')[0].substring(0, 30) || 'this note';
                 const message = `Delete "${displayTitle}${note.content && note.content.length > 30 ? '...' : ''}"?`;
                 modalConfirmButton.classList.remove('hidden'); modalCancelButton.textContent = 'Cancel';
-                showModal('Delete Note', message, async () => { // Make async
+                showModal('Delete Note', message, async () => {
                     const result = await apiRequest(`/notes/${noteId}`, { method: 'DELETE' });
                     hideModal();
-                    if (result) {
-                        await fetchNotesFromServer(); // Refetch notes on success
-                        populateHashtagFilter();
-                        showTemporaryMessage("Note deleted.");
-                    } // Error handled by apiRequest
+                    if (result) { await fetchNotesFromServer(); populateHashtagFilter(); showTemporaryMessage("Note deleted."); }
                 });
             };
 
-            // Updated to use PATCH API call
-            const handleTogglePlannerStatusClick = async (noteId) => { // Make async
-                if (isTogglingPlanner) { console.log("[Planner Toggle] Already toggling, ignoring click."); return; }
-                isTogglingPlanner = true;
-
-                // Send PATCH request to the backend to handle the toggle
+            const handleTogglePlannerStatusClick = async (noteId) => {
+                if (isTogglingPlanner) { console.log("[Planner Toggle] Already toggling, ignoring click."); return; } isTogglingPlanner = true;
                 const result = await apiRequest(`/notes/${noteId}/toggle-planner`, { method: 'PATCH' });
-
-                if (result) { // Backend returns updated note on success
-                    // Update the local state for immediate feedback (optional, but good UX)
-                    // const noteIndex = notes.findIndex(n => n.id === noteId);
-                    // if (noteIndex > -1) {
-                    //     notes[noteIndex] = result; // Update local note with response from backend
-                    // }
-                    // renderAllSections(); // Re-render immediately based on updated local state
-
-                    // OR simply refetch all notes for guaranteed consistency
+                if (result) {
                     await fetchNotesFromServer();
-
                     const displayTitle = (result.content || '').split('\n')[0].substring(0, 30) || 'Note';
                     const message = `Planner status updated for "${displayTitle}${result.content && result.content.length > 30 ? '...' : ''}".`;
                     showTemporaryMessage(message);
                 }
-                // Error message handled by apiRequest helper
-
-                // Release the lock
                 setTimeout(() => { isTogglingPlanner = false; }, 300);
             };
 
-             // Updated to use PATCH API call
-             const handleToggleCompleteClick = async (noteId, isChecked) => { // Make async
+             const handleToggleCompleteClick = async (noteId, isChecked) => {
                  console.log(`[Complete Toggle] Note ID: ${noteId}, Checked: ${isChecked}`);
-
-                 // Send PATCH request with the new state in the body
-                 const result = await apiRequest(`/notes/${noteId}/toggle-complete`, {
-                     method: 'PATCH',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({ isComplete: isChecked })
-                 });
-
-                 if (result) {
-                     // Refetch notes to update UI (simplest approach)
-                     await fetchNotesFromServer();
-                 }
-                 // Error message handled by apiRequest helper
+                 const result = await apiRequest(`/notes/${noteId}/toggle-complete`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isComplete: isChecked }) });
+                 if (result) { await fetchNotesFromServer(); }
              };
 
 
             let searchTimeout;
-            // Updated search handler
             const handleSearchInput = () => {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
                     currentSearchFilter = searchInput.value.trim();
-                    if (currentTagFilter) { currentTagFilter = ''; hashtagFilter.value = ''; } // Clear tag filter on search
-                    // Perform filtering client-side based on the current 'notes' array
+                    if (currentTagFilter) { currentTagFilter = ''; hashtagFilter.value = ''; }
                     const lowerSearchTerm = currentSearchFilter.toLowerCase();
-                    const filteredNotes = notes.filter(note =>
-                        (note.content && note.content.toLowerCase().includes(lowerSearchTerm)) ||
-                        (Array.isArray(note.tags) && note.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm)))
-                    );
+                    const filteredNotes = notes.filter(note => (note.content && note.content.toLowerCase().includes(lowerSearchTerm)) || (Array.isArray(note.tags) && note.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm))) );
                     renderResultsOverlay(filteredNotes, `Search Results for "${currentSearchFilter}"`);
                 }, 300);
             };
 
-            // Updated tag filter handler
             const handleTagFilterChange = () => {
                 currentTagFilter = hashtagFilter.value;
                 console.log(`[Filter] Tag selected: ${currentTagFilter || 'All Tags'}`);
-                if (currentSearchFilter) { currentSearchFilter = ''; searchInput.value = ''; } // Clear search on tag filter
-
-                if (currentTagFilter) {
-                    // Filter client-side
-                    let filteredNotes = notes.filter(note => Array.isArray(note.tags) && note.tags.includes(currentTagFilter));
-                    renderResultsOverlay(filteredNotes, `Notes tagged with #${currentTagFilter}`);
-                } else {
-                    resultsArea.classList.add('hidden'); // Hide results overlay
-                    mainGridContainer.classList.remove('hidden'); // Show main sections
-                    renderAllSections(); // Re-render sections using current 'notes' data
-                }
+                if (currentSearchFilter) { currentSearchFilter = ''; searchInput.value = ''; }
+                if (currentTagFilter) { let filteredNotes = notes.filter(note => Array.isArray(note.tags) && note.tags.includes(currentTagFilter)); renderResultsOverlay(filteredNotes, `Notes tagged with #${currentTagFilter}`); }
+                else { resultsArea.classList.add('hidden'); mainGridContainer.classList.remove('hidden'); renderAllSections(); }
             };
 
             // --- Inline Add Form Handlers ---
-            const showInlineAddForm = (section) => { /* ... unchanged ... */ };
-            const hideInlineAddForm = (section) => { /* ... unchanged ... */ };
-            // Updated inline save to use API
-            const handleInlineSave = async (section) => { // Make async
-                console.log(`[Inline Add] Save for ${section}`);
-                const textarea = (section === 'work') ? workAddTextarea : personalAddTextarea;
-                const content = textarea.value.trim();
-                const category = section;
-
-                if (!content) { showModal('Input Error', 'Please enter some content.', () => hideModal()); modalConfirmButton.classList.add('hidden'); modalCancelButton.textContent = 'OK'; return; }
-
-                const tags = extractHashtags(content);
-                const newNoteData = { content, category, tags, isInPlanner: false, isComplete: false };
-
-                const result = await apiRequest('/notes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newNoteData)
-                });
-
-                if (result) {
-                    await fetchNotesFromServer(); // Refetch notes
-                    populateHashtagFilter();
-                    hideInlineAddForm(section);
-                    showTemporaryMessage("Note added!");
-                } else {
-                    console.error("Failed to save inline note via API.");
-                }
-            };
-
-            // --- Re-add implementations ---
             const showInlineAddForm = (section) => { console.log(`[Inline Add] Show form for ${section}`); if (section === 'work') { workAddPlaceholder.classList.add('hidden'); workAddForm.classList.remove('hidden'); workAddForm.classList.add('active'); workAddTextarea.focus(); } else if (section === 'personal') { personalAddPlaceholder.classList.add('hidden'); personalAddForm.classList.remove('hidden'); personalAddForm.classList.add('active'); personalAddTextarea.focus(); } };
             const hideInlineAddForm = (section) => { console.log(`[Inline Add] Hide form for ${section}`); if (section === 'work') { workAddForm.classList.add('hidden'); workAddForm.classList.remove('active'); workAddTextarea.value = ''; workAddPlaceholder.classList.remove('hidden'); } else if (section === 'personal') { personalAddForm.classList.add('hidden'); personalAddForm.classList.remove('active'); personalAddTextarea.value = ''; personalAddPlaceholder.classList.remove('hidden'); } };
+            const handleInlineSave = async (section) => {
+                console.log(`[Inline Add] Save for ${section}`);
+                const textarea = (section === 'work') ? workAddTextarea : personalAddTextarea;
+                const content = textarea.value.trim(); const category = section;
+                if (!content) { showModal('Input Error', 'Please enter some content.', () => hideModal()); modalConfirmButton.classList.add('hidden'); modalCancelButton.textContent = 'OK'; return; }
+                const tags = extractHashtags(content); const newNoteData = { content, category, tags, isInPlanner: false, isComplete: false };
+                const result = await apiRequest('/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newNoteData) });
+                if (result) { await fetchNotesFromServer(); populateHashtagFilter(); hideInlineAddForm(section); showTemporaryMessage("Note added!"); }
+                else { console.error("Failed to save inline note via API."); }
+            };
 
 
             // --- Event Listeners Setup ---
             const addNoteCardEventListeners = (containerElement) => { const handleCardActions = (event) => { const target = event.target; if (target.matches('.completion-checkbox')) { const noteId = target.dataset.id; if (noteId) { handleToggleCompleteClick(noteId, target.checked); } return; } const button = target.closest('.edit-note-button, .delete-note-button, .toggle-planner-button'); if (!button) return; const noteCard = button.closest('.note-card'); if (!noteCard) return; const noteId = noteCard.dataset.id; if (!noteId) return; console.log(`[Card Action] Button clicked: ${button.className}, Note ID: ${noteId}`); if (button.classList.contains('edit-note-button')) handleEditNoteClick(noteId); else if (button.classList.contains('delete-note-button')) handleDeleteNoteClick(noteId); else if (button.classList.contains('toggle-planner-button')) handleTogglePlannerStatusClick(noteId); }; containerElement.removeEventListener('click', handleCardActions); containerElement.removeEventListener('change', handleCardActions); containerElement.addEventListener('click', handleCardActions); containerElement.addEventListener('change', handleCardActions); };
-
-            // Handler for clicking section headers (only Planner opens editor now)
-            const handleSectionHeaderClick = (event) => {
-                 const button = event.currentTarget;
-                 const view = button.dataset.view;
-                 console.log(`[Section Header Click] Triggered for view: ${view}`);
-                 if (view === 'planner') { handleAddNoteClick({ addToPlanner: true }); }
-            };
-
-            // Handler for main FAB click (opens overlay editor)
-            const handleAddNoteClick = (options = {}) => {
-                console.log("[Add Note Overlay] Triggered. Options:", options);
-                const { category = 'none', addToPlanner = false } = options;
-                resetEditor();
-                noteToEditId = null;
-                noteCategoryInput.value = category;
-                noteAddToPlannerFlag.value = addToPlanner ? 'true' : 'false';
-                if (addToPlanner) { editorTitle.textContent = 'Add Note to Planner'; }
-                else if (category !== 'none') { editorTitle.textContent = `Add ${category.charAt(0).toUpperCase() + category.slice(1)} Note`; }
-                else { editorTitle.textContent = 'Add New Note'; }
-                updateSaveButtonState();
-                showEditor();
-            };
-
-            // New handler for clearing completed notes
-            const handleClearCompletedClick = async () => { // Make async
-                const completedNotesExist = notes.some(note => note.isComplete);
-                if (!completedNotesExist) {
-                    showTemporaryMessage("No completed notes to clear.");
-                    return;
-                }
-
-                showModal(
-                    'Clear Completed Notes',
-                    `Are you sure you want to permanently delete all completed notes? This cannot be undone.`,
-                    async () => { // Make confirmation async
-                        console.log("[Clear Completed] Deleting completed notes via API...");
-                        const result = await apiRequest(`/notes/completed`, { method: 'DELETE' });
-                        hideModal();
-                        if (result) {
-                            await fetchNotesFromServer(); // Refetch notes on success
-                            populateHashtagFilter();
-                            showTemporaryMessage(`Completed note(s) cleared.`);
-                            console.log("[Clear Completed] Deletion complete.");
-                        } // Error handled by apiRequest
-                    }
-                );
-            };
+            const handleSectionHeaderClick = (event) => { const button = event.currentTarget; const view = button.dataset.view; console.log(`[Section Header Click] Triggered for view: ${view}`); if (view === 'planner') { handleAddNoteClick({ addToPlanner: true }); } };
+            const handleAddNoteClick = (options = {}) => { console.log("[Add Note Overlay] Triggered. Options:", options); const { category = 'none', addToPlanner = false } = options; resetEditor(); noteToEditId = null; noteCategoryInput.value = category; noteAddToPlannerFlag.value = addToPlanner ? 'true' : 'false'; if (addToPlanner) { editorTitle.textContent = 'Add Note to Planner'; } else if (category !== 'none') { editorTitle.textContent = `Add ${category.charAt(0).toUpperCase() + category.slice(1)} Note`; } else { editorTitle.textContent = 'Add New Note'; } updateSaveButtonState(); showEditor(); };
+            const handleClearCompletedClick = async () => { const completedNotesExist = notes.some(note => note.isComplete); if (!completedNotesExist) { showTemporaryMessage("No completed notes to clear."); return; } showModal( 'Clear Completed Notes', `Are you sure you want to permanently delete all completed notes? This cannot be undone.`, async () => { console.log("[Clear Completed] Deleting completed notes via API..."); const result = await apiRequest(`/notes/completed`, { method: 'DELETE' }); hideModal(); if (result) { await fetchNotesFromServer(); populateHashtagFilter(); showTemporaryMessage(`Completed note(s) cleared.`); console.log("[Clear Completed] Deletion complete."); } } ); };
 
             // --- New function to fetch notes ---
             const fetchNotesFromServer = async () => {
@@ -677,46 +522,37 @@
                     notes = fetchedNotes; // Update global notes array
                     console.log(`[API Fetch] Successfully fetched ${notes.length} notes.`);
                     renderAllSections(); // Re-render UI with fetched notes
-                } else {
-                    console.error("[API Fetch] Failed to fetch notes. UI might be stale.");
-                    // Optionally clear existing notes display or show persistent error
-                    // For now, just logs error via apiRequest helper
-                }
+                } else { console.error("[API Fetch] Failed to fetch notes. UI might be stale."); }
             };
 
 
             // --- Initialization ---
             const initializeApp = async () => { // Make async
                 console.log("[Init] App Initializing...");
-                // Added clearCompletedButton check
                 if (!fabAddNoteButton || !mainGridContainer || !editorOverlay || !sectionTriggers || !workNotesContainer || !personalNotesContainer || !plannerNotesContainer || !resultsNotesContainer || !hashtagFilter || !noteCategoryInput || !saveNoteButton || !workAddPlaceholder || !workAddForm || !personalAddPlaceholder || !personalAddForm || !clearCompletedButton) { console.error("[Init Error] Critical UI elements not found."); alert("Error: Could not initialize app."); return; }
                 console.log("[Init] Critical elements found.");
-
-                // Fetch initial notes instead of loading from localStorage
-                await fetchNotesFromServer(); // Wait for notes to load
-
-                console.log("[Init] Populating tag filter...");
-                populateHashtagFilter(); // Populate based on fetched notes
-
+                await fetchNotesFromServer(); // Wait for notes to load initially
+                console.log("[Init] Populating tag filter..."); populateHashtagFilter();
+                // renderAllSections is called within fetchNotesFromServer
                 console.log("[Init] Adding event listeners...");
                 try {
                     fabAddNoteButton.addEventListener('click', () => handleAddNoteClick());
-                    saveNoteButton.addEventListener('click', handleSaveNote); // Stays same, calls API
+                    saveNoteButton.addEventListener('click', handleSaveNote);
                     cancelNoteButton.addEventListener('click', handleCancelNote);
                     searchInput.addEventListener('input', handleSearchInput);
                     hashtagFilter.addEventListener('change', handleTagFilterChange);
-                    clearCompletedButton.addEventListener('click', handleClearCompletedClick); // Added listener
+                    clearCompletedButton.addEventListener('click', handleClearCompletedClick);
                     noteCategoryInput.addEventListener('change', updateSaveButtonState);
-                    sectionTriggers.forEach((button) => { if(button && button.dataset.view === 'planner') { button.addEventListener('click', handleSectionHeaderClick); } else { console.log(`[Init] Skipping editor trigger listener for ${button?.dataset.view} header.`); } }); // Only planner header opens editor
+                    sectionTriggers.forEach((button) => { if(button && button.dataset.view === 'planner') { button.addEventListener('click', handleSectionHeaderClick); } else { console.log(`[Init] Skipping editor trigger listener for ${button?.dataset.view} header.`); } });
                     workAddPlaceholder.addEventListener('click', () => showInlineAddForm('work'));
                     personalAddPlaceholder.addEventListener('click', () => showInlineAddForm('personal'));
                     document.querySelectorAll('.inline-cancel-button').forEach(btn => { btn.addEventListener('click', (e) => hideInlineAddForm(e.target.dataset.section)); });
-                    document.querySelectorAll('.inline-save-button').forEach(btn => { btn.addEventListener('click', (e) => handleInlineSave(e.target.dataset.section)); }); // Calls API now
+                    document.querySelectorAll('.inline-save-button').forEach(btn => { btn.addEventListener('click', (e) => handleInlineSave(e.target.dataset.section)); });
                     modalCancelButton.addEventListener('click', hideModal);
                     modalConfirmButton.addEventListener('click', () => { if (typeof confirmAction === 'function') { try { confirmAction(); } catch (e) { console.error(e); hideModal(); } } else { hideModal(); } });
                     console.log("[Init] Listeners attached.");
                 } catch (error) { console.error("[Init Error] Failed to attach event listeners:", error); alert("Error: Could not set up interactions."); return; }
-                console.log("Note Taker Pro Initialized (Connected to Backend)");
+                console.log("Note Taker Pro Initialized (Backend Connected)");
             };
 
             // --- Start the App ---
