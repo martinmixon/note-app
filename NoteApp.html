@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Taker Pro (Backend)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-anchor: none;
+        }
+        /* Note card styles */
+        .note-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .note-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        /* Scrollbar styles */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* Section container height and scroll */
+        .section-notes-container {
+            max-height: 350px; /* Reduced height slightly */
+            overflow-y: auto;
+            padding-right: 4px; /* Space for scrollbar */
+        }
+        /* Editor overlay styles */
+        #view-note-editor-overlay {
+            transition: opacity 0.3s ease-in-out;
+            z-index: 40; /* Below modal (50) */
+        }
+         /* Search results / Tag Filter overlay */
+         #results-area {
+             z-index: 30;
+         }
+        .hidden-overlay, .hidden { /* Combined hidden class */
+            opacity: 0;
+            pointer-events: none;
+            display: none; /* Added display none */
+        }
+        .visible-overlay {
+            opacity: 1;
+            pointer-events: auto;
+            display: flex; /* For overlays */
+        }
+        /* FAB style */
+        #fab-add-note { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 45; }
+        /* Modal Style */
+        .modal { transition: opacity 0.25s ease; z-index: 50;}
+        .modal-content { transition: transform 0.25s ease; }
+        /* Disabled button style */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* Style for completed notes */
+        .completed-note .note-title-text {
+             text-decoration: line-through;
+             color: #94a3b8; /* slate-400 */
+        }
+        /* Align checkbox */
+        .note-card-top-row {
+            display: flex;
+            align-items: flex-start; /* Align items to the top */
+            gap: 0.5rem; /* space-x-2 */
+        }
+         .note-card-top-row .completion-checkbox {
+             margin-top: 0.125rem; /* Adjust checkbox alignment slightly */
+         }
+         /* Inline add form transition */
+         .inline-add-form {
+             transition: all 0.3s ease-in-out;
+             max-height: 0;
+             overflow: hidden;
+         }
+         .inline-add-form.active {
+             max-height: 300px; /* Adjust as needed */
+             opacity: 1;
+             pointer-events: auto;
+             display: block; /* Show the form */
+         }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-white shadow-sm p-4 sticky top-0 z-20">
+        <div class="max-w-6xl mx-auto">
+             <h1 class="text-xl font-bold text-indigo-600 mb-3 md:hidden">Note Taker Pro</h1>
+             <div class="flex flex-col sm:flex-row gap-2 items-center">
+                 <div class="relative flex-grow w-full sm:w-auto">
+                    <input type="search" id="search-input" placeholder="Search notes..." class="w-full p-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                    <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <div class="flex-shrink-0 w-full sm:w-auto">
+                    <select id="hashtag-filter" class="w-full sm:w-48 p-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm h-[42px]">
+                        <option value="">All Tags</option>
+                        </select>
+                </div>
+                <div class="flex-shrink-0 w-full sm:w-auto">
+                    <button id="clear-completed-button" title="Clear Completed Notes" class="w-full sm:w-auto p-2 h-[42px] border border-slate-300 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors duration-150 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span class="ml-1 sm:hidden">Clear Completed</span>
+                    </button>
+                </div>
+             </div>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 md:p-6 max-w-6xl mx-auto w-full relative">
+
+        <div id="main-grid-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+            <div class="md:col-span-1 flex flex-col gap-6">
+                <div class="bg-white p-4 rounded-lg shadow flex flex-col min-h-[250px]">
+                    <div class="text-left mb-3"> <h2 class="text-lg font-semibold text-slate-700">Work</h2> </div>
+                    <div id="work-add-placeholder" class="inline-add-placeholder border border-dashed border-slate-300 rounded-md p-2 text-sm text-slate-500 cursor-pointer hover:bg-slate-50 mb-3 text-center"> + Add a Work Note... </div>
+                    <div id="work-add-form" class="inline-add-form mb-3"> <textarea id="work-add-textarea" rows="3" placeholder="Enter new work note..." class="w-full p-2 border border-slate-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea> <div class="flex justify-end space-x-2"> <button class="inline-cancel-button px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-xs font-medium" data-section="work">Cancel</button> <button class="inline-save-button px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-semibold" data-section="work">Save</button> </div> </div>
+                    <div id="work-notes-container" class="section-notes-container flex-grow space-y-2"> <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p> </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow flex flex-col min-h-[250px]">
+                     <div class="text-left mb-3"> <h2 class="text-lg font-semibold text-slate-700">Personal</h2> </div>
+                     <div id="personal-add-placeholder" class="inline-add-placeholder border border-dashed border-slate-300 rounded-md p-2 text-sm text-slate-500 cursor-pointer hover:bg-slate-50 mb-3 text-center"> + Add a Personal Note... </div>
+                     <div id="personal-add-form" class="inline-add-form mb-3"> <textarea id="personal-add-textarea" rows="3" placeholder="Enter new personal note..." class="w-full p-2 border border-slate-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea> <div class="flex justify-end space-x-2"> <button class="inline-cancel-button px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-xs font-medium" data-section="personal">Cancel</button> <button class="inline-save-button px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-semibold" data-section="personal">Save</button> </div> </div>
+                     <div id="personal-notes-container" class="section-notes-container flex-grow space-y-2"> <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p> </div>
+                </div>
+            </div>
+            <div class="md:col-span-2 flex flex-col gap-6">
+                 <div class="bg-white p-4 rounded-lg shadow flex flex-col min-h-[516px]">
+                    <button data-view="planner" class="section-trigger text-left mb-3 hover:text-indigo-600">
+                        <h2 class="text-lg font-semibold text-slate-700">Planner</h2>
+                        <p class="text-xs text-slate-500">Click header to add new note to planner</p>
+                    </button>
+                    <div id="planner-notes-container" class="section-notes-container flex-grow space-y-2"> <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p> </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="results-area" class="absolute inset-0 bg-slate-100 p-4 md:p-6 hidden">
+             <h2 id="results-title" class="text-xl font-semibold mb-4 text-slate-700">Results</h2>
+             <div id="results-notes-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"> <p id="no-results-message" class="text-slate-500 col-span-full">No matching notes found.</p> </div>
+        </div>
+
+        <div id="view-note-editor-overlay" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm p-4 md:p-10 hidden-overlay flex items-center justify-center">
+            <div id="view-note-editor" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                 <h2 id="editor-title" class="text-xl font-semibold mb-6 text-slate-700">Add New Note</h2>
+                 <div class="hidden"> <input type="hidden" id="note-id"> <input type="hidden" id="note-add-to-planner-flag"> </div>
+                 <div class="space-y-4">
+                     <div> <label for="note-content" class="block text-sm font-medium text-slate-600 mb-1">Note Content (use #hashtags)</label> <textarea id="note-content" rows="12" placeholder="Enter your note here... The first line can act as a title. Use #hashtags to categorize!" class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea> </div>
+                     <div> <label for="note-category" class="block text-sm font-medium text-slate-600 mb-1">Category <span id="category-required-indicator" class="text-red-500 hidden">* Required</span></label> <select id="note-category" class="w-full p-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"> <option value="none">-- Select Category --</option> <option value="work">Work</option> <option value="personal">Personal</option> </select> </div>
+                     <div class="flex justify-end space-x-3 pt-4"> <button id="cancel-note-button" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition duration-200 font-medium">Cancel</button> <button id="save-note-button" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold">Save Note</button> </div>
+                 </div>
+            </div>
+        </div>
+    </main>
+
+    <button id="fab-add-note" class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200" title="Add New Note">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+    </button>
+
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 hidden modal">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md modal-content transform scale-95">
+            <h3 id="modal-title" class="text-lg font-semibold mb-4 text-slate-700">Confirmation</h3>
+            <p id="modal-message" class="text-slate-600 mb-6">Are you sure?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel-button" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition duration-200 font-medium">Cancel</button>
+                <button id="modal-confirm-button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-200 font-semibold">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        try {
+            console.log("[Script Start] Initializing...");
+
+            // --- API Configuration ---
+            const API_BASE_URL = 'http://localhost:3001/api'; // Your backend URL
+
+            // --- DOM Elements ---
+            const workNotesContainer = document.getElementById('work-notes-container');
+            const personalNotesContainer = document.getElementById('personal-notes-container');
+            const plannerNotesContainer = document.getElementById('planner-notes-container');
+            const resultsNotesContainer = document.getElementById('results-notes-container');
+            const fabAddNoteButton = document.getElementById('fab-add-note');
+            const saveNoteButton = document.getElementById('save-note-button');
+            const cancelNoteButton = document.getElementById('cancel-note-button');
+            const searchInput = document.getElementById('search-input');
+            const hashtagFilter = document.getElementById('hashtag-filter');
+            const clearCompletedButton = document.getElementById('clear-completed-button');
+            const editorTitle = document.getElementById('editor-title');
+            const noteIdInput = document.getElementById('note-id');
+            const noteContentInput = document.getElementById('note-content');
+            const noteCategoryInput = document.getElementById('note-category');
+            const noteAddToPlannerFlag = document.getElementById('note-add-to-planner-flag');
+            const mainGridContainer = document.getElementById('main-grid-container');
+            const resultsArea = document.getElementById('results-area');
+            const resultsTitle = document.getElementById('results-title');
+            const editorOverlay = document.getElementById('view-note-editor-overlay');
+            const viewNoteEditor = document.getElementById('view-note-editor');
+            const sectionTriggers = document.querySelectorAll('.section-trigger');
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCancelButton = document.getElementById('modal-cancel-button');
+            const modalConfirmButton = document.getElementById('modal-confirm-button');
+            const categoryRequiredIndicator = document.getElementById('category-required-indicator');
+            const workAddPlaceholder = document.getElementById('work-add-placeholder');
+            const workAddForm = document.getElementById('work-add-form');
+            const workAddTextarea = document.getElementById('work-add-textarea');
+            const personalAddPlaceholder = document.getElementById('personal-add-placeholder');
+            const personalAddForm = document.getElementById('personal-add-form');
+            const personalAddTextarea = document.getElementById('personal-add-textarea');
+
+            // --- State Variables ---
+            let notes = []; // This will now be populated from the backend
+            let currentSearchFilter = '';
+            let currentTagFilter = '';
+            let noteToEditId = null;
+            let confirmAction = null;
+            let isTogglingPlanner = false;
+
+            // --- Utility Functions ---
+            const generateId = () => '_' + Math.random().toString(36).substr(2, 9); // Still useful for potential client-side ops if needed
+            const formatDateReadable = (dateInput) => { if (!dateInput) return ''; const date = new Date(dateInput); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }); };
+            const formatDateReadableLong = (dateInput) => { if (!dateInput) return ''; const date = new Date(dateInput); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' }); };
+            const extractHashtags = (text) => { if (!text) return []; const regex = /#([a-zA-Z0-9_]+)/g; const matches = text.match(regex); if (!matches) return []; return [...new Set(matches.map(tag => tag.substring(1)))]; };
+            // Removed saveNotesToLocalStorage & loadNotesFromLocalStorage
+            const showModal = (title, message, onConfirm) => { modalTitle.textContent = title; modalMessage.textContent = message; confirmAction = onConfirm; modalConfirmButton.classList.remove('hidden'); modalCancelButton.textContent = 'Cancel'; modal.classList.remove('hidden'); requestAnimationFrame(() => { modal.style.opacity = 1; modal.querySelector('.modal-content').style.transform = 'scale(1)'; }); };
+            const hideModal = () => { modal.style.opacity = 0; modal.querySelector('.modal-content').style.transform = 'scale(0.95)'; setTimeout(() => { modal.classList.add('hidden'); confirmAction = null; }, 250); };
+            const showTemporaryMessage = (message, isError = false) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.textContent = message;
+                // Add error styling if needed
+                const bgColor = isError ? 'bg-red-600' : 'bg-gray-800';
+                messageDiv.className = `fixed bottom-20 right-6 ${bgColor} text-white px-5 py-3 rounded-lg shadow-lg transition-opacity duration-300 z-50 text-sm opacity-0`;
+                document.body.appendChild(messageDiv);
+                void messageDiv.offsetWidth;
+                requestAnimationFrame(() => { messageDiv.style.opacity = '1'; });
+                setTimeout(() => {
+                    messageDiv.style.opacity = '0';
+                    setTimeout(() => { if (messageDiv.parentNode) { messageDiv.remove(); } }, 300);
+                }, 3000); // Keep message slightly longer
+            };
+
+            // --- API Call Helper ---
+            /**
+             * Makes a fetch request to the backend API.
+             * @param {string} endpoint - The API endpoint (e.g., '/notes', '/notes/123').
+             * @param {object} options - Fetch options (method, headers, body).
+             * @returns {Promise<object|null>} - The JSON response or null on error.
+             */
+            async function apiRequest(endpoint, options = {}) {
+                console.log(`[API Request] ${options.method || 'GET'} ${endpoint}`, options.body ? JSON.parse(options.body) : '');
+                try {
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+
+                    if (!response.ok) {
+                        // Try to parse error message from backend if available
+                        let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMsg = errorData.error || errorMsg;
+                        } catch (e) { /* Ignore if response body isn't JSON */ }
+                        console.error(errorMsg);
+                        showTemporaryMessage(`Error: ${errorMsg}`, true);
+                        return null; // Indicate failure
+                    }
+
+                    // Handle responses that might not have a body (like DELETE 200 OK)
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        return await response.json(); // Parse JSON body
+                    } else {
+                        return { success: true, status: response.status }; // Return success indicator for non-JSON responses
+                    }
+
+                } catch (error) {
+                    console.error(`[API Fetch Error] ${options.method || 'GET'} ${endpoint}:`, error);
+                    showTemporaryMessage('Network error. Is the backend server running?', true);
+                    return null; // Indicate failure
+                }
+            }
+
+
+            // --- Rendering Functions ---
+            const createNoteCardHTML = (note, context = 'default') => {
+                if (!note || !note.id) return '';
+                const formattedDate = (context === 'planner') ? formatDateReadableLong(note.updatedAt || note.createdAt) : formatDateReadable(note.updatedAt || note.createdAt);
+                const bubbleBaseClasses = "inline-block px-1.5 py-0.5 rounded-full text-xs font-medium mr-1 mb-1";
+                const tagsHTML = Array.isArray(note.tags) ? note.tags.map(tag => `<span class="${bubbleBaseClasses} bg-sky-100 text-sky-700">#${tag}</span>`).join('') : '';
+                let categoryBadge = ''; let cardBorderClass = '';
+                const isSectionContext = (context === 'work' || context === 'personal' || context === 'planner');
+
+                if (isSectionContext) {
+                    if (note.category === 'work') { cardBorderClass = 'border-l-4 border-blue-500'; }
+                    else if (note.category === 'personal') { cardBorderClass = 'border-l-4 border-green-500'; }
+                    else if (context === 'planner') { cardBorderClass = 'border-l-4 border-slate-300'; }
+                } else {
+                     if (note.category && note.category !== 'none') { categoryBadge = `<span class="${bubbleBaseClasses} capitalize bg-sky-100 text-sky-700">${note.category}</span>`; }
+                }
+
+                const contentText = typeof note.content === 'string' ? note.content : '';
+                const lines = contentText.split('\n');
+                const displayTitle = lines[0] || 'Untitled Note';
+                const plannerIconHTML = note.isInPlanner ? `<svg class="w-4 h-4 text-purple-600 inline-block ml-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" title="In Planner"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>` : '';
+                const plannerButtonText = note.isInPlanner ? 'Remove from Planner' : 'Move to Planner';
+                const plannerButtonIcon = note.isInPlanner ? `<svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>` : `<svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>`;
+                const actionButtonsHTML = `<div class="space-x-1 flex items-center flex-shrink-0"><button class="edit-note-button text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100" title="Edit Note"> <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> </button><button class="toggle-planner-button ${note.isInPlanner ? 'text-red-500 hover:text-red-700 hover:bg-red-100' : 'text-purple-500 hover:text-purple-700 hover:bg-purple-100'} p-0.5 rounded" title="${plannerButtonText}"> ${plannerButtonIcon} </button><button class="delete-note-button text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-100" title="Delete Note"> <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> </button></div>`;
+
+                return `
+                    <div class="bg-white p-2 rounded-md shadow-sm note-card flex flex-col justify-between border ${cardBorderClass || 'border-slate-200'} ${note.isComplete ? 'completed-note' : ''}" data-id="${note.id}">
+                        <div class="flex justify-between items-start gap-2 mb-1 note-card-top-row">
+                             <input type="checkbox" class="completion-checkbox flex-shrink-0 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="${note.id}" ${note.isComplete ? 'checked' : ''}>
+                             <div class="flex-grow flex justify-between items-start gap-2 min-w-0">
+                                <h3 class="font-semibold text-sm text-slate-800 break-words leading-tight flex-grow mr-1">
+                                    <span class="note-title-text">${displayTitle}</span> ${plannerIconHTML}
+                                </h3>
+                                ${actionButtonsHTML}
+                             </div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs gap-2 mt-1 pl-6">
+                            <div class="flex flex-wrap items-center gap-1 flex-grow min-w-0">
+                                ${tagsHTML}
+                                ${categoryBadge}
+                            </div>
+                            <span class="text-slate-400 flex-shrink-0 ml-1">${formattedDate}</span>
+                        </div>
+                    </div>`;
+            };
+
+
+            // Helper to render notes into a specific container
+            const renderNotesIntoContainer = (notesToRender, containerElement) => {
+                 // console.log(`[Render Container] Rendering ${notesToRender.length} notes into container:`, containerElement.id); // Less verbose now
+                 let context = 'default';
+                 if (containerElement.id === 'planner-notes-container') { context = 'planner'; }
+                 else if (containerElement.id === 'work-notes-container') { context = 'work'; }
+                 else if (containerElement.id === 'personal-notes-container') { context = 'personal'; }
+                 else if (containerElement.id === 'results-notes-container') { context = 'results'; }
+
+                 let generatedHTML = "";
+                 notesToRender.forEach(note => { generatedHTML += createNoteCardHTML(note, context); });
+
+                 containerElement.innerHTML = '';
+                 const noNotesMsg = containerElement.querySelector('.no-notes-message');
+                 if (notesToRender.length > 0) {
+                     if(noNotesMsg) noNotesMsg.classList.add('hidden');
+                     containerElement.classList.add('space-y-2');
+                     containerElement.innerHTML = generatedHTML;
+                 } else {
+                     if(noNotesMsg) noNotesMsg.classList.remove('hidden');
+                     else { containerElement.innerHTML = `<p class="no-notes-message text-slate-500 text-sm">No notes found.</p>`; }
+                     containerElement.classList.remove('space-y-2');
+                 }
+                 addNoteCardEventListeners(containerElement);
+            };
+
+            // Renders notes into all section containers using the global 'notes' array
+            const renderAllSections = () => {
+                 console.log("[Render] Rendering all sections...");
+                 // Sort oldest first by createdAt from the global notes array
+                 const sortedNotes = [...notes].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+                 const workNotes = sortedNotes.filter(note => note.category === 'work');
+                 renderNotesIntoContainer(workNotes, workNotesContainer);
+                 const personalNotes = sortedNotes.filter(note => note.category === 'personal');
+                 renderNotesIntoContainer(personalNotes, personalNotesContainer);
+                 const plannerNotes = sortedNotes.filter(note => note.isInPlanner === true);
+                 renderNotesIntoContainer(plannerNotes, plannerNotesContainer);
+                 console.log("[Render] All sections rendered.");
+            };
+
+            // Renders search OR tag filter results into the results overlay
+            const renderResultsOverlay = (filteredNotes, title) => {
+                 console.log(`[Render] Rendering results overlay: ${title}`);
+                 mainGridContainer.classList.add('hidden');
+                 resultsArea.classList.remove('hidden');
+                 resultsTitle.textContent = title;
+                 resultsNotesContainer.classList.add('space-y-2', 'md:space-y-0');
+                 // Sort results oldest first
+                 filteredNotes.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                 renderNotesIntoContainer(filteredNotes, resultsNotesContainer); // Uses default context here
+                 const noResultsMsg = resultsNotesContainer.querySelector('.no-notes-message');
+                 if(noResultsMsg) { noResultsMsg.textContent = `No notes found matching criteria.`; if (filteredNotes.length > 0) { noResultsMsg.classList.add('hidden'); } else { noResultsMsg.classList.remove('hidden'); } }
+            };
+
+            // Populates the hashtag filter dropdown from the global 'notes' array
+            const populateHashtagFilter = () => {
+                console.log("[Tags] Populating hashtag filter");
+                const allTags = new Set();
+                notes.forEach(note => { if (Array.isArray(note.tags)) { note.tags.forEach(tag => allTags.add(tag)); } });
+                const sortedTags = Array.from(allTags).sort((a, b) => a.localeCompare(b));
+                const currentValue = hashtagFilter.value;
+                while (hashtagFilter.options.length > 1) { hashtagFilter.remove(1); }
+                sortedTags.forEach(tag => { const option = document.createElement('option'); option.value = tag; option.textContent = `#${tag}`; hashtagFilter.appendChild(option); });
+                if (hashtagFilter.querySelector(`option[value="${currentValue}"]`)) { hashtagFilter.value = currentValue; }
+                else { hashtagFilter.value = ""; if (currentTagFilter && currentTagFilter !== "") { handleTagFilterChange(); } currentTagFilter = ""; }
+                console.log("[Tags] Hashtag filter populated");
+            };
+
+
+            // --- View Switching (Editor Overlay) ---
+            const showEditor = () => { console.log("[Editor] Showing editor overlay"); editorOverlay.classList.remove('hidden-overlay'); editorOverlay.classList.add('visible-overlay'); };
+            const hideEditor = () => { console.log("[Editor] Hiding editor overlay"); editorOverlay.classList.remove('visible-overlay'); editorOverlay.classList.add('hidden-overlay'); resetEditor(); noteToEditId = null; };
+
+
+            // --- Event Handlers ---
+            const updateSaveButtonState = () => {
+                const isAddingNew = noteToEditId === null; const isPlannerNote = noteAddToPlannerFlag.value === 'true'; const categorySelected = noteCategoryInput.value !== 'none';
+                if (isAddingNew && !isPlannerNote && !categorySelected) { saveNoteButton.disabled = true; categoryRequiredIndicator?.classList.remove('hidden'); }
+                else { saveNoteButton.disabled = false; categoryRequiredIndicator?.classList.add('hidden'); }
+            };
+
+            // Save handler for the main overlay editor (Create or Update)
+            const handleSaveNote = async () => { // Make async
+                const isAddingNew = noteToEditId === null;
+                const isPlannerNote = noteAddToPlannerFlag.value === 'true';
+                const categorySelected = noteCategoryInput.value !== 'none';
+
+                // Frontend validation (redundant if button is disabled, but good practice)
+                if (isAddingNew && !isPlannerNote && !categorySelected) {
+                     console.warn("[Save] Attempted to save without category selection.");
+                     showModal('Category Required', 'Please select a category (Work or Personal) before saving.', () => hideModal());
+                     modalConfirmButton.classList.add('hidden'); modalCancelButton.textContent = 'OK';
+                     return;
+                }
+
+                const content = noteContentInput.value.trim();
+                const category = noteCategoryInput.value;
+                const tags = extractHashtags(content);
+
+                if (!content) { showModal('Input Error', 'Please enter some content.', () => hideModal()); modalConfirmButton.classList.add('hidden'); modalCancelButton.textContent = 'OK'; return; }
+
+                let result = null;
+                if (isAddingNew) {
+                    // Create New Note via API
+                    const newNoteData = { content, category, tags, isInPlanner: isPlannerNote, isComplete: false };
+                    result = await apiRequest('/notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newNoteData)
+                    });
+                } else {
+                    // Update Existing Note via API (only content, category, tags)
+                    const updatedNoteData = { content, category, tags };
+                     result = await apiRequest(`/notes/${noteToEditId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatedNoteData)
+                    });
+                }
+
+                if (result) { // If API call was successful
+                    hideEditor();
+                    await fetchNotesFromServer(); // Refetch all notes to update UI
+                    populateHashtagFilter(); // Update tags based on potentially new data
+                    showTemporaryMessage(isAddingNew ? "Note created!" : "Note updated!");
+                } else {
+                    // Error message already shown by apiRequest helper
+                    console.error("Failed to save note via API.");
+                }
+            };
+
+            const resetEditor = () => { noteIdInput.value = ''; noteContentInput.value = ''; noteCategoryInput.value = 'none'; noteAddToPlannerFlag.value = 'false'; editorTitle.textContent = 'Add New Note'; updateSaveButtonState(); };
+            const handleCancelNote = () => { hideEditor(); }; // For main editor overlay
+
+            const handleEditNoteClick = (noteId) => {
+                const note = notes.find(n => n.id === noteId); // Find in current frontend state
+                if (note) {
+                    resetEditor();
+                    noteToEditId = note.id;
+                    noteContentInput.value = note.content || '';
+                    noteCategoryInput.value = note.category || 'none';
+                    // Set flags based on the note being edited
+                    noteAddToPlannerFlag.value = note.isInPlanner ? 'true' : 'false';
+                    editorTitle.textContent = 'Edit Note';
+                    updateSaveButtonState(); // Ensure save is enabled
+                    showEditor();
+                } else {
+                    console.error("Cannot edit note - not found in local state:", noteId);
+                    showTemporaryMessage("Error: Could not find note data to edit.", true);
+                }
+            };
+
+            const handleDeleteNoteClick = (noteId) => {
+                const note = notes.find(n => n.id === noteId); if (!note) return;
+                const displayTitle = (note.content || '').split('\n')[0].substring(0, 30) || 'this note';
+                const message = `Delete "${displayTitle}${note.content && note.content.length > 30 ? '...' : ''}"?`;
+                modalConfirmButton.classList.remove('hidden'); modalCancelButton.textContent = 'Cancel';
+                showModal('Delete Note', message, async () => { // Make async
+                    const result = await apiRequest(`/notes/${noteId}`, { method: 'DELETE' });
+                    hideModal();
+                    if (result) {
+                        await fetchNotesFromServer(); // Refetch notes on success
+                        populateHashtagFilter();
+                        showTemporaryMessage("Note deleted.");
+                    } // Error handled by apiRequest
+                });
+            };
+
+            // Updated to use PATCH API call
+            const handleTogglePlannerStatusClick = async (noteId) => { // Make async
+                if (isTogglingPlanner) { console.log("[Planner Toggle] Already toggling, ignoring click."); return; }
+                isTogglingPlanner = true;
+
+                // Send PATCH request to the backend to handle the toggle
+                const result = await apiRequest(`/notes/${noteId}/toggle-planner`, { method: 'PATCH' });
+
+                if (result) { // Backend returns updated note on success
+                    // Update the local state for immediate feedback (optional, but good UX)
+                    // const noteIndex = notes.findIndex(n => n.id === noteId);
+                    // if (noteIndex > -1) {
+                    //     notes[noteIndex] = result; // Update local note with response from backend
+                    // }
+                    // renderAllSections(); // Re-render immediately based on updated local state
+
+                    // OR simply refetch all notes for guaranteed consistency
+                    await fetchNotesFromServer();
+
+                    const displayTitle = (result.content || '').split('\n')[0].substring(0, 30) || 'Note';
+                    const message = `Planner status updated for "${displayTitle}${result.content && result.content.length > 30 ? '...' : ''}".`;
+                    showTemporaryMessage(message);
+                }
+                // Error message handled by apiRequest helper
+
+                // Release the lock
+                setTimeout(() => { isTogglingPlanner = false; }, 300);
+            };
+
+             // Updated to use PATCH API call
+             const handleToggleCompleteClick = async (noteId, isChecked) => { // Make async
+                 console.log(`[Complete Toggle] Note ID: ${noteId}, Checked: ${isChecked}`);
+
+                 // Send PATCH request with the new state in the body
+                 const result = await apiRequest(`/notes/${noteId}/toggle-complete`, {
+                     method: 'PATCH',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ isComplete: isChecked })
+                 });
+
+                 if (result) {
+                     // Refetch notes to update UI (simplest approach)
+                     await fetchNotesFromServer();
+                 }
+                 // Error message handled by apiRequest helper
+             };
+
+
+            let searchTimeout;
+            // Updated search handler
+            const handleSearchInput = () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentSearchFilter = searchInput.value.trim();
+                    if (currentTagFilter) { currentTagFilter = ''; hashtagFilter.value = ''; } // Clear tag filter on search
+                    // Perform filtering client-side based on the current 'notes' array
+                    const lowerSearchTerm = currentSearchFilter.toLowerCase();
+                    const filteredNotes = notes.filter(note =>
+                        (note.content && note.content.toLowerCase().includes(lowerSearchTerm)) ||
+                        (Array.isArray(note.tags) && note.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm)))
+                    );
+                    renderResultsOverlay(filteredNotes, `Search Results for "${currentSearchFilter}"`);
+                }, 300);
+            };
+
+            // Updated tag filter handler
+            const handleTagFilterChange = () => {
+                currentTagFilter = hashtagFilter.value;
+                console.log(`[Filter] Tag selected: ${currentTagFilter || 'All Tags'}`);
+                if (currentSearchFilter) { currentSearchFilter = ''; searchInput.value = ''; } // Clear search on tag filter
+
+                if (currentTagFilter) {
+                    // Filter client-side
+                    let filteredNotes = notes.filter(note => Array.isArray(note.tags) && note.tags.includes(currentTagFilter));
+                    renderResultsOverlay(filteredNotes, `Notes tagged with #${currentTagFilter}`);
+                } else {
+                    resultsArea.classList.add('hidden'); // Hide results overlay
+                    mainGridContainer.classList.remove('hidden'); // Show main sections
+                    renderAllSections(); // Re-render sections using current 'notes' data
+                }
+            };
+
+            // --- Inline Add Form Handlers ---
+            const showInlineAddForm = (section) => { /* ... unchanged ... */ };
+            const hideInlineAddForm = (section) => { /* ... unchanged ... */ };
+            // Updated inline save to use API
+            const handleInlineSave = async (section) => { // Make async
+                console.log(`[Inline Add] Save for ${section}`);
+                const textarea = (section === 'work') ? workAddTextarea : personalAddTextarea;
+                const content = textarea.value.trim();
+                const category = section;
+
+                if (!content) { showModal('Input Error', 'Please enter some content.', () => hideModal()); modalConfirmButton.classList.add('hidden'); modalCancelButton.textContent = 'OK'; return; }
+
+                const tags = extractHashtags(content);
+                const newNoteData = { content, category, tags, isInPlanner: false, isComplete: false };
+
+                const result = await apiRequest('/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newNoteData)
+                });
+
+                if (result) {
+                    await fetchNotesFromServer(); // Refetch notes
+                    populateHashtagFilter();
+                    hideInlineAddForm(section);
+                    showTemporaryMessage("Note added!");
+                } else {
+                    console.error("Failed to save inline note via API.");
+                }
+            };
+
+            // --- Re-add implementations ---
+            const showInlineAddForm = (section) => { console.log(`[Inline Add] Show form for ${section}`); if (section === 'work') { workAddPlaceholder.classList.add('hidden'); workAddForm.classList.remove('hidden'); workAddForm.classList.add('active'); workAddTextarea.focus(); } else if (section === 'personal') { personalAddPlaceholder.classList.add('hidden'); personalAddForm.classList.remove('hidden'); personalAddForm.classList.add('active'); personalAddTextarea.focus(); } };
+            const hideInlineAddForm = (section) => { console.log(`[Inline Add] Hide form for ${section}`); if (section === 'work') { workAddForm.classList.add('hidden'); workAddForm.classList.remove('active'); workAddTextarea.value = ''; workAddPlaceholder.classList.remove('hidden'); } else if (section === 'personal') { personalAddForm.classList.add('hidden'); personalAddForm.classList.remove('active'); personalAddTextarea.value = ''; personalAddPlaceholder.classList.remove('hidden'); } };
+
+
+            // --- Event Listeners Setup ---
+            const addNoteCardEventListeners = (containerElement) => { const handleCardActions = (event) => { const target = event.target; if (target.matches('.completion-checkbox')) { const noteId = target.dataset.id; if (noteId) { handleToggleCompleteClick(noteId, target.checked); } return; } const button = target.closest('.edit-note-button, .delete-note-button, .toggle-planner-button'); if (!button) return; const noteCard = button.closest('.note-card'); if (!noteCard) return; const noteId = noteCard.dataset.id; if (!noteId) return; console.log(`[Card Action] Button clicked: ${button.className}, Note ID: ${noteId}`); if (button.classList.contains('edit-note-button')) handleEditNoteClick(noteId); else if (button.classList.contains('delete-note-button')) handleDeleteNoteClick(noteId); else if (button.classList.contains('toggle-planner-button')) handleTogglePlannerStatusClick(noteId); }; containerElement.removeEventListener('click', handleCardActions); containerElement.removeEventListener('change', handleCardActions); containerElement.addEventListener('click', handleCardActions); containerElement.addEventListener('change', handleCardActions); };
+
+            // Handler for clicking section headers (only Planner opens editor now)
+            const handleSectionHeaderClick = (event) => {
+                 const button = event.currentTarget;
+                 const view = button.dataset.view;
+                 console.log(`[Section Header Click] Triggered for view: ${view}`);
+                 if (view === 'planner') { handleAddNoteClick({ addToPlanner: true }); }
+            };
+
+            // Handler for main FAB click (opens overlay editor)
+            const handleAddNoteClick = (options = {}) => {
+                console.log("[Add Note Overlay] Triggered. Options:", options);
+                const { category = 'none', addToPlanner = false } = options;
+                resetEditor();
+                noteToEditId = null;
+                noteCategoryInput.value = category;
+                noteAddToPlannerFlag.value = addToPlanner ? 'true' : 'false';
+                if (addToPlanner) { editorTitle.textContent = 'Add Note to Planner'; }
+                else if (category !== 'none') { editorTitle.textContent = `Add ${category.charAt(0).toUpperCase() + category.slice(1)} Note`; }
+                else { editorTitle.textContent = 'Add New Note'; }
+                updateSaveButtonState();
+                showEditor();
+            };
+
+            // New handler for clearing completed notes
+            const handleClearCompletedClick = async () => { // Make async
+                const completedNotesExist = notes.some(note => note.isComplete);
+                if (!completedNotesExist) {
+                    showTemporaryMessage("No completed notes to clear.");
+                    return;
+                }
+
+                showModal(
+                    'Clear Completed Notes',
+                    `Are you sure you want to permanently delete all completed notes? This cannot be undone.`,
+                    async () => { // Make confirmation async
+                        console.log("[Clear Completed] Deleting completed notes via API...");
+                        const result = await apiRequest(`/notes/completed`, { method: 'DELETE' });
+                        hideModal();
+                        if (result) {
+                            await fetchNotesFromServer(); // Refetch notes on success
+                            populateHashtagFilter();
+                            showTemporaryMessage(`Completed note(s) cleared.`);
+                            console.log("[Clear Completed] Deletion complete.");
+                        } // Error handled by apiRequest
+                    }
+                );
+            };
+
+            // --- New function to fetch notes ---
+            const fetchNotesFromServer = async () => {
+                console.log("[API Fetch] Fetching all notes...");
+                const fetchedNotes = await apiRequest('/notes');
+                if (fetchedNotes) {
+                    notes = fetchedNotes; // Update global notes array
+                    console.log(`[API Fetch] Successfully fetched ${notes.length} notes.`);
+                    renderAllSections(); // Re-render UI with fetched notes
+                } else {
+                    console.error("[API Fetch] Failed to fetch notes. UI might be stale.");
+                    // Optionally clear existing notes display or show persistent error
+                    // For now, just logs error via apiRequest helper
+                }
+            };
+
+
+            // --- Initialization ---
+            const initializeApp = async () => { // Make async
+                console.log("[Init] App Initializing...");
+                // Added clearCompletedButton check
+                if (!fabAddNoteButton || !mainGridContainer || !editorOverlay || !sectionTriggers || !workNotesContainer || !personalNotesContainer || !plannerNotesContainer || !resultsNotesContainer || !hashtagFilter || !noteCategoryInput || !saveNoteButton || !workAddPlaceholder || !workAddForm || !personalAddPlaceholder || !personalAddForm || !clearCompletedButton) { console.error("[Init Error] Critical UI elements not found."); alert("Error: Could not initialize app."); return; }
+                console.log("[Init] Critical elements found.");
+
+                // Fetch initial notes instead of loading from localStorage
+                await fetchNotesFromServer(); // Wait for notes to load
+
+                console.log("[Init] Populating tag filter...");
+                populateHashtagFilter(); // Populate based on fetched notes
+
+                console.log("[Init] Adding event listeners...");
+                try {
+                    fabAddNoteButton.addEventListener('click', () => handleAddNoteClick());
+                    saveNoteButton.addEventListener('click', handleSaveNote); // Stays same, calls API
+                    cancelNoteButton.addEventListener('click', handleCancelNote);
+                    searchInput.addEventListener('input', handleSearchInput);
+                    hashtagFilter.addEventListener('change', handleTagFilterChange);
+                    clearCompletedButton.addEventListener('click', handleClearCompletedClick); // Added listener
+                    noteCategoryInput.addEventListener('change', updateSaveButtonState);
+                    sectionTriggers.forEach((button) => { if(button && button.dataset.view === 'planner') { button.addEventListener('click', handleSectionHeaderClick); } else { console.log(`[Init] Skipping editor trigger listener for ${button?.dataset.view} header.`); } }); // Only planner header opens editor
+                    workAddPlaceholder.addEventListener('click', () => showInlineAddForm('work'));
+                    personalAddPlaceholder.addEventListener('click', () => showInlineAddForm('personal'));
+                    document.querySelectorAll('.inline-cancel-button').forEach(btn => { btn.addEventListener('click', (e) => hideInlineAddForm(e.target.dataset.section)); });
+                    document.querySelectorAll('.inline-save-button').forEach(btn => { btn.addEventListener('click', (e) => handleInlineSave(e.target.dataset.section)); }); // Calls API now
+                    modalCancelButton.addEventListener('click', hideModal);
+                    modalConfirmButton.addEventListener('click', () => { if (typeof confirmAction === 'function') { try { confirmAction(); } catch (e) { console.error(e); hideModal(); } } else { hideModal(); } });
+                    console.log("[Init] Listeners attached.");
+                } catch (error) { console.error("[Init Error] Failed to attach event listeners:", error); alert("Error: Could not set up interactions."); return; }
+                console.log("Note Taker Pro Initialized (Connected to Backend)");
+            };
+
+            // --- Start the App ---
+            if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initializeApp); }
+            else { initializeApp(); }
+
+        } catch (error) { console.error("[Script Error] A critical error occurred:", error); alert("A critical error occurred while loading the application."); }
+    </script>
+
+</body>
+</html>
