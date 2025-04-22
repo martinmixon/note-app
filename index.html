@@ -21,9 +21,9 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        /* Section container height and scroll */
+        /* Section container scroll - Removed max-height */
         .section-notes-container {
-            max-height: 350px; /* Reduced height slightly */
+            /* max-height: 600px; */ /* REMOVED */
             overflow-y: auto;
             padding-right: 4px; /* Space for scrollbar */
         }
@@ -112,34 +112,61 @@
     <main class="flex-1 p-4 md:p-6 max-w-6xl mx-auto w-full relative">
 
         <div id="main-grid-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+
             <div class="md:col-span-1 flex flex-col gap-6">
-                <div class="bg-white p-4 rounded-lg shadow flex flex-col min-h-[250px]">
-                    <div class="text-left mb-3"> <h2 class="text-lg font-semibold text-slate-700">Work</h2> </div>
-                    <div id="work-add-placeholder" class="inline-add-placeholder border border-dashed border-slate-300 rounded-md p-2 text-sm text-slate-500 cursor-pointer hover:bg-slate-50 mb-3 text-center"> + Add a Work Note... </div>
-                    <div id="work-add-form" class="inline-add-form mb-3"> <textarea id="work-add-textarea" rows="3" placeholder="Enter new work note..." class="w-full p-2 border border-slate-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea> <div class="flex justify-end space-x-2"> <button class="inline-cancel-button px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-xs font-medium" data-section="work">Cancel</button> <button class="inline-save-button px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-semibold" data-section="work">Save</button> </div> </div>
-                    <div id="work-notes-container" class="section-notes-container flex-grow space-y-2"> <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p> </div>
+                <div class="bg-white p-4 rounded-lg shadow flex flex-col"> <div class="text-left mb-3">
+                        <h2 class="text-lg font-semibold text-slate-700">Work</h2>
+                    </div>
+                    <div id="work-add-placeholder" class="inline-add-placeholder border border-dashed border-slate-300 rounded-md p-2 text-sm text-slate-500 cursor-pointer hover:bg-slate-50 mb-3 text-center">
+                        + Add a Work Note...
+                    </div>
+                    <div id="work-add-form" class="inline-add-form mb-3">
+                        <textarea id="work-add-textarea" rows="3" placeholder="Enter new work note..." class="w-full p-2 border border-slate-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <div class="flex justify-end space-x-2">
+                            <button class="inline-cancel-button px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-xs font-medium" data-section="work">Cancel</button>
+                            <button class="inline-save-button px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-semibold" data-section="work">Save</button>
+                        </div>
+                    </div>
+                    <div id="work-notes-container" class="section-notes-container flex-grow space-y-2">
+                        <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p>
+                    </div>
                 </div>
-                <div class="bg-white p-4 rounded-lg shadow flex flex-col min-h-[250px]">
-                     <div class="text-left mb-3"> <h2 class="text-lg font-semibold text-slate-700">Personal</h2> </div>
-                     <div id="personal-add-placeholder" class="inline-add-placeholder border border-dashed border-slate-300 rounded-md p-2 text-sm text-slate-500 cursor-pointer hover:bg-slate-50 mb-3 text-center"> + Add a Personal Note... </div>
-                     <div id="personal-add-form" class="inline-add-form mb-3"> <textarea id="personal-add-textarea" rows="3" placeholder="Enter new personal note..." class="w-full p-2 border border-slate-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea> <div class="flex justify-end space-x-2"> <button class="inline-cancel-button px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-xs font-medium" data-section="personal">Cancel</button> <button class="inline-save-button px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-semibold" data-section="personal">Save</button> </div> </div>
-                     <div id="personal-notes-container" class="section-notes-container flex-grow space-y-2"> <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p> </div>
+
+                <div class="bg-white p-4 rounded-lg shadow flex flex-col"> <div class="text-left mb-3">
+                        <h2 class="text-lg font-semibold text-slate-700">Personal</h2>
+                    </div>
+                     <div id="personal-add-placeholder" class="inline-add-placeholder border border-dashed border-slate-300 rounded-md p-2 text-sm text-slate-500 cursor-pointer hover:bg-slate-50 mb-3 text-center">
+                        + Add a Personal Note...
+                    </div>
+                    <div id="personal-add-form" class="inline-add-form mb-3">
+                        <textarea id="personal-add-textarea" rows="3" placeholder="Enter new personal note..." class="w-full p-2 border border-slate-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <div class="flex justify-end space-x-2">
+                            <button class="inline-cancel-button px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-xs font-medium" data-section="personal">Cancel</button>
+                            <button class="inline-save-button px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-semibold" data-section="personal">Save</button>
+                        </div>
+                    </div>
+                     <div id="personal-notes-container" class="section-notes-container flex-grow space-y-2">
+                        <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p>
+                    </div>
                 </div>
             </div>
+
             <div class="md:col-span-2 flex flex-col gap-6">
-                 <div class="bg-white p-4 rounded-lg shadow flex flex-col min-h-[516px]">
-                    <button data-view="planner" class="section-trigger text-left mb-3 hover:text-indigo-600">
+                 <div class="bg-white p-4 rounded-lg shadow flex flex-col h-full"> <button data-view="planner" class="section-trigger text-left mb-3 hover:text-indigo-600">
                         <h2 class="text-lg font-semibold text-slate-700">Planner</h2>
                         <p class="text-xs text-slate-500">Click header to add new note to planner</p>
                     </button>
-                    <div id="planner-notes-container" class="section-notes-container flex-grow space-y-2"> <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p> </div>
+                    <div id="planner-notes-container" class="section-notes-container flex-grow space-y-2">
+                        <p class="no-notes-message text-slate-500 text-sm">Loading notes...</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="results-area" class="absolute inset-0 bg-slate-100 p-4 md:p-6 hidden">
              <h2 id="results-title" class="text-xl font-semibold mb-4 text-slate-700">Results</h2>
-             <div id="results-notes-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"> <p id="no-results-message" class="text-slate-500 col-span-full">No matching notes found.</p> </div>
+             <div id="results-notes-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"> <p id="no-results-message" class="text-slate-500 col-span-full">No matching notes found.</p>
+                 </div>
         </div>
 
         <div id="view-note-editor-overlay" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm p-4 md:p-10 hidden-overlay flex items-center justify-center">
@@ -153,6 +180,7 @@
                  </div>
             </div>
         </div>
+
     </main>
 
     <button id="fab-add-note" class="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200" title="Add New Note">
@@ -176,7 +204,6 @@
             console.log("[Script Start] Initializing...");
 
             // --- API Configuration ---
-            // !! IMPORTANT: Replace with your actual deployed backend URL !!
             const API_BASE_URL = 'https://assorted-tin-busby.glitch.me/api'; // Your Glitch backend URL
 
             // --- DOM Elements ---
@@ -215,7 +242,7 @@
             const personalAddTextarea = document.getElementById('personal-add-textarea');
 
             // --- State Variables ---
-            let notes = []; // This will now be populated from the backend
+            let notes = [];
             let currentSearchFilter = '';
             let currentTagFilter = '';
             let noteToEditId = null;
@@ -227,22 +254,11 @@
             const formatDateReadable = (dateInput) => { if (!dateInput) return ''; const date = new Date(dateInput); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }); };
             const formatDateReadableLong = (dateInput) => { if (!dateInput) return ''; const date = new Date(dateInput); if (isNaN(date.getTime())) return ''; return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' }); };
             const extractHashtags = (text) => { if (!text) return []; const regex = /#([a-zA-Z0-9_]+)/g; const matches = text.match(regex); if (!matches) return []; return [...new Set(matches.map(tag => tag.substring(1)))]; };
-            // Removed saveNotesToLocalStorage & loadNotesFromLocalStorage
+            const saveNotesToLocalStorage = () => { try { localStorage.setItem('notesAppProData', JSON.stringify(notes)); } catch (error) { console.error("Error saving notes:", error); showModal('Storage Error', 'Could not save notes.', () => hideModal()); modalConfirmButton.classList.add('hidden'); modalCancelButton.textContent = 'OK'; } };
+            const loadNotesFromLocalStorage = () => { try { const savedNotes = localStorage.getItem('notesAppProData'); notes = savedNotes ? JSON.parse(savedNotes) : []; let updated = false; notes.forEach(note => { if (note.isComplete === undefined) { note.isComplete = false; updated = true; } if (note.completedAt === undefined) { note.completedAt = null; updated = true; } if (note.isInPlanner === undefined) { note.isInPlanner = false; updated = true; } if (note.plannerDate !== undefined) { delete note.plannerDate; updated = true; } if (note.title !== undefined) { delete note.title; updated = true; } }); if (updated) { saveNotesToLocalStorage(); } } catch (error) { console.error("Error loading notes:", error); notes = []; showModal('Storage Error', 'Could not load notes.', () => hideModal()); modalConfirmButton.classList.add('hidden'); modalCancelButton.textContent = 'OK'; } };
             const showModal = (title, message, onConfirm) => { modalTitle.textContent = title; modalMessage.textContent = message; confirmAction = onConfirm; modalConfirmButton.classList.remove('hidden'); modalCancelButton.textContent = 'Cancel'; modal.classList.remove('hidden'); requestAnimationFrame(() => { modal.style.opacity = 1; modal.querySelector('.modal-content').style.transform = 'scale(1)'; }); };
             const hideModal = () => { modal.style.opacity = 0; modal.querySelector('.modal-content').style.transform = 'scale(0.95)'; setTimeout(() => { modal.classList.add('hidden'); confirmAction = null; }, 250); };
-            const showTemporaryMessage = (message, isError = false) => {
-                const messageDiv = document.createElement('div');
-                messageDiv.textContent = message;
-                const bgColor = isError ? 'bg-red-600' : 'bg-gray-800';
-                messageDiv.className = `fixed bottom-20 right-6 ${bgColor} text-white px-5 py-3 rounded-lg shadow-lg transition-opacity duration-300 z-50 text-sm opacity-0`;
-                document.body.appendChild(messageDiv);
-                void messageDiv.offsetWidth;
-                requestAnimationFrame(() => { messageDiv.style.opacity = '1'; });
-                setTimeout(() => {
-                    messageDiv.style.opacity = '0';
-                    setTimeout(() => { if (messageDiv.parentNode) { messageDiv.remove(); } }, 300);
-                }, 3000);
-            };
+            const showTemporaryMessage = (message, isError = false) => { const messageDiv = document.createElement('div'); messageDiv.textContent = message; const bgColor = isError ? 'bg-red-600' : 'bg-gray-800'; messageDiv.className = `fixed bottom-20 right-6 ${bgColor} text-white px-5 py-3 rounded-lg shadow-lg transition-opacity duration-300 z-50 text-sm opacity-0`; document.body.appendChild(messageDiv); void messageDiv.offsetWidth; requestAnimationFrame(() => { messageDiv.style.opacity = '1'; }); setTimeout(() => { messageDiv.style.opacity = '0'; setTimeout(() => { if (messageDiv.parentNode) { messageDiv.remove(); } }, 300); }, 3000); };
 
             // --- API Call Helper ---
             async function apiRequest(endpoint, options = {}) {
@@ -313,7 +329,7 @@
 
             // Helper to render notes into a specific container
             const renderNotesIntoContainer = (notesToRender, containerElement) => {
-                 // console.log(`[Render Container] Rendering ${notesToRender.length} notes into container:`, containerElement.id); // Less verbose now
+                 // console.log(`[Render Container] Rendering ${notesToRender.length} notes into container:`, containerElement.id);
                  let context = 'default';
                  if (containerElement.id === 'planner-notes-container') { context = 'planner'; }
                  else if (containerElement.id === 'work-notes-container') { context = 'work'; }
@@ -321,7 +337,7 @@
                  else if (containerElement.id === 'results-notes-container') { context = 'results'; }
 
                  let generatedHTML = "";
-                 notesToRender.forEach(note => { generatedHTML += createNoteCardHTML(note, context); }); // Pass context here
+                 notesToRender.forEach(note => { generatedHTML += createNoteCardHTML(note, context); });
 
                  containerElement.innerHTML = '';
                  const noNotesMsg = containerElement.querySelector('.no-notes-message');
@@ -329,12 +345,12 @@
                      if(noNotesMsg) noNotesMsg.classList.add('hidden');
                      containerElement.classList.add('space-y-2');
                      containerElement.innerHTML = generatedHTML;
-                     // console.log(`[Render Container] After render for ${containerElement.id}, childElementCount: ${containerElement.childElementCount}, First child:`, containerElement.firstElementChild?.outerHTML.substring(0,100)); // Less verbose
+                     // console.log(`[Render Container] After render for ${containerElement.id}, childElementCount: ${containerElement.childElementCount}, First child:`, containerElement.firstElementChild?.outerHTML.substring(0,100));
                  } else {
                      if(noNotesMsg) noNotesMsg.classList.remove('hidden');
                      else { containerElement.innerHTML = `<p class="no-notes-message text-slate-500 text-sm">No notes found.</p>`; }
                      containerElement.classList.remove('space-y-2');
-                     // console.log(`[Render Container] After render for ${containerElement.id} (empty), childElementCount: ${containerElement.childElementCount}`); // Less verbose
+                     // console.log(`[Render Container] After render for ${containerElement.id} (empty), childElementCount: ${containerElement.childElementCount}`);
                  }
                  addNoteCardEventListeners(containerElement);
             };
@@ -342,9 +358,7 @@
             // Renders notes into all section containers using the global 'notes' array
             const renderAllSections = () => {
                  console.log("[Render] Rendering all sections...");
-                 // Sort oldest first by createdAt from the global notes array
                  const sortedNotes = [...notes].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
                  const workNotes = sortedNotes.filter(note => note.category === 'work');
                  renderNotesIntoContainer(workNotes, workNotesContainer);
                  const personalNotes = sortedNotes.filter(note => note.category === 'personal');
@@ -361,7 +375,6 @@
                  resultsArea.classList.remove('hidden');
                  resultsTitle.textContent = title;
                  resultsNotesContainer.classList.add('space-y-2', 'md:space-y-0');
-                 // Sort results oldest first
                  filteredNotes.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
                  renderNotesIntoContainer(filteredNotes, resultsNotesContainer); // Uses default context here
                  const noResultsMsg = resultsNotesContainer.querySelector('.no-notes-message');
@@ -518,11 +531,15 @@
             const fetchNotesFromServer = async () => {
                 console.log("[API Fetch] Fetching all notes...");
                 const fetchedNotes = await apiRequest('/notes');
-                if (fetchedNotes) {
-                    notes = fetchedNotes; // Update global notes array
+                if (fetchedNotes && Array.isArray(fetchedNotes)) {
+                    notes = fetchedNotes;
                     console.log(`[API Fetch] Successfully fetched ${notes.length} notes.`);
-                    renderAllSections(); // Re-render UI with fetched notes
-                } else { console.error("[API Fetch] Failed to fetch notes. UI might be stale."); }
+                    renderAllSections();
+                } else {
+                    console.error("[API Fetch] Failed to fetch notes or received invalid data. UI might be stale.");
+                    notes = [];
+                    renderAllSections();
+                }
             };
 
 
@@ -531,9 +548,8 @@
                 console.log("[Init] App Initializing...");
                 if (!fabAddNoteButton || !mainGridContainer || !editorOverlay || !sectionTriggers || !workNotesContainer || !personalNotesContainer || !plannerNotesContainer || !resultsNotesContainer || !hashtagFilter || !noteCategoryInput || !saveNoteButton || !workAddPlaceholder || !workAddForm || !personalAddPlaceholder || !personalAddForm || !clearCompletedButton) { console.error("[Init Error] Critical UI elements not found."); alert("Error: Could not initialize app."); return; }
                 console.log("[Init] Critical elements found.");
-                await fetchNotesFromServer(); // Wait for notes to load initially
+                await fetchNotesFromServer();
                 console.log("[Init] Populating tag filter..."); populateHashtagFilter();
-                // renderAllSections is called within fetchNotesFromServer
                 console.log("[Init] Adding event listeners...");
                 try {
                     fabAddNoteButton.addEventListener('click', () => handleAddNoteClick());
